@@ -16,9 +16,9 @@ jobs:
         run: |
           PRICE=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd" | jq -r '.bitcoin.usd')
           echo "BTC: $PRICE"
-          mosquitto_pub -h test.mosquitto.org -p 1883 -t "btc/javado13_0922709/price" -m "$PRICE"
+          mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/price" -m "$PRICE"
 
       - name: Fetch candles and publish
         run: |
           CANDLES=$(curl -s "https://apiv2.nobitex.ir/market/udf/history?symbol=BTCUSDT&resolution=240&countback=24&to=$(date +%s)" | jq -c '{t:.t,o:.o,h:.h,l:.l,c:.c}')
-          mosquitto_pub -h test.mosquitto.org -p 1883 -t "btc/javado13_0922709/candles" -m "$CANDLES"
+          mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/candles" -m "$CANDLES"
