@@ -14,12 +14,12 @@ jobs:
 
       - name: Fetch BTC price from Binance
         run: |
-          PRICE=$(curl -s "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT" | jq -r '.price')
+          PRICE=$(curl -s -H "User-Agent: Mozilla/5.0" "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT" | jq -r '.price')
           echo "BTC: $PRICE"
           mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/price" -m "$PRICE"
 
       - name: Fetch 4H candles from Binance
         run: |
-          CANDLES=$(curl -s "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=24" | jq -c '{t: [.[][0]], o: [.[][1]|tonumber], h: [.[][2]|tonumber], l: [.[][3]|tonumber], c: [.[][4]|tonumber]}')
+          CANDLES=$(curl -s -H "User-Agent: Mozilla/5.0" "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=4h&limit=24" | jq -c '{t: map(.[0]), o: map(.[1]|tonumber), h: map(.[2]|tonumber), l: map(.[3]|tonumber), c: map(.[4]|tonumber)}')
           echo "Candles fetched successfully"
           mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/candles" -m "$CANDLES"
