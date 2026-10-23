@@ -16,10 +16,10 @@ jobs:
         run: |
           PRICE=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd" | jq -r '.bitcoin.usd')
           echo "BTC: $PRICE"
-          mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/price" -m "$PRICE"
+          mosquitto_pub -h broker.emqx.io -p 1883 -r -t "btc/javado13_0922709/price" -m "$PRICE"
 
       - name: Fetch 4H candles from CoinGecko
         run: |
           CANDLES=$(curl -s "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=7" | jq -c '{t: map(.[0]), o: map(.[1]), h: map(.[2]), l: map(.[3]), c: map(.[4])}')
           echo "Candles fetched successfully"
-          mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/candles" -m "$CANDLES"
+          mosquitto_pub -h broker.emqx.io -p 1883 -r -t "btc/javado13_0922709/candles" -m "$CANDLES"
