@@ -12,14 +12,14 @@ jobs:
       - name: Install tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq mosquitto-clients jq
 
-      - name: Fetch BTC price from Coinbase
+      - name: Fetch BTC price from CoinGecko
         run: |
-          PRICE=$(curl -s "https://api.coinbase.com/v2/prices/BTC-USD/spot" | jq -r '.data.amount')
+          PRICE=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd" | jq -r '.bitcoin.usd')
           echo "BTC: $PRICE"
           mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/price" -m "$PRICE"
 
-      - name: Fetch 4H candles from Coinbase
+      - name: Fetch 4H candles from CoinGecko
         run: |
-          CANDLES=$(curl -s "https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=14400" | jq -c '.[0:24] | reverse | {t: map(.[0]), l: map(.[1]), h: map(.[2]), o: map(.[3]), c: map(.[4])}')
+          CANDLES=$(curl -s "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=7" | jq -c '{t: map(.[0]), o: map(.[1]), h: map(.[2]), l: map(.[3]), c: map(.[4])}')
           echo "Candles fetched successfully"
           mosquitto_pub -h broker.emqx.io -p 1883 -t "btc/javado13_0922709/candles" -m "$CANDLES"
