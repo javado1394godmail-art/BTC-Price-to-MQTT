@@ -1,0 +1,49 @@
+name: BTC 4H candles to MQTT (v2)
+
+on:
+  schedule:
+    # Lower usage keeps a 5-minute price feed + candles below ~10k/mo.
+    # Provisional current candle updates on ESP32 from 5-minute price samples.
+    - cron: '23 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: btc-candles-publisher
+  cancel-in-progress: false
+
+jobs:
+  candles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Install lightweight MQTT client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mosquitto-clients jq
+
+      - name: Publish compact OHLC candles
+        shell: bash
+        env:
+          CG_DEMO_API_KEY: ${{ secrets.CG_DEMO_API_KEY }}
+          MQTT_HOST: broker.emqx.io
+          TOPIC_BASE: btc/javado13_0922709
+        run: |
+          set -euo pipefail
+          URL='https://api.coingecko.com/api/v3/coins/bitcoin/ohlc?vs_currency=usd&days=7'
+          HEADERS=()
+          if [[ -n "$CG_DEMO_API_KEY" ]]; then
+            HEADERS=(-H "x-cg-demo-api-key: ${CG_DEMO_API_KEY}")
+          fi
+          RAW="$(curl -fsS --max-time 25 --retry 2 --retry-delay 3 "${HEADERS[@]}" "$URL")"
+          # Publish only the 24 newest bars; retained packets stay small.
+          CANDLES="$(jq -ce '
+            if type == "array" and length >= 2 and (.[-1] | length) >= 5 then
+              .[-24:] |
+              {t: map(.[0]),
+               o: map(.[1]), h: map(.[2]),
+               l: map(.[3]), c: map(.[4])}
+            else error("Unexpected CoinGecko OHLC response") end
+          ' <<<"$RAW")"
+          echo "Validated candles: $(jq '.c | length' <<<"$CANDLES")"
+          mosquitto_pub -h "$MQTT_HOST" -p 1883 -r -t "$TOPIC_BASE/candles" -m "$CANDLES"
