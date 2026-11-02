@@ -1,0 +1,24 @@
+name: BTC Multi-Timeframe OHLC to MQTT
+
+on:
+  schedule:
+    # Each 10 minutes, off the hour to reduce schedule contention.
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MQTT CLI
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mosquitto-clients
+      - name: Fetch 1H / 4H / 1D / 1W and publish retained topics
+        env:
+          MQTT_HOST: broker.emqx.io
+          MQTT_CANDLE_TOPIC: btc/javado13_0922709/candles
+        run: python3 scripts/publish_timeframes.py
